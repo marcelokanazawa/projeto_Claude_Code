@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cotação do Dólar</title>
+<meta name="description" content="Cotação diária do dólar (PTAX) frente ao real, de 2020 até hoje, com dados do Banco Central do Brasil.">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --text: #1b1f24;
+    --muted: #5f6b7a;
+    --border: #e1e5ea;
+    --accent: #1f6feb;
+    --accent-soft: rgba(31, 111, 235, 0.12);
+    --up: #c0392b;
+    --down: #1e8449;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216;
+      --surface: #171b21;
+      --text: #e6e9ee;
+      --muted: #97a1ad;
+      --border: #2a3039;
+      --accent: #58a6ff;
+      --accent-soft: rgba(88, 166, 255, 0.15);
+      --up: #f07167;
+      --down: #4cc38a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216;
+    --surface: #171b21;
+    --text: #e6e9ee;
+    --muted: #97a1ad;
+    --border: #2a3039;
+    --accent: #58a6ff;
+    --accent-soft: rgba(88, 166, 255, 0.15);
+    --up: #f07167;
+    --down: #4cc38a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+  }
+  main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 1.75rem; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); margin: 0 0 24px; }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .card .label { font-size: 0.85rem; color: var(--muted); }
+  .card .value { font-size: 1.6rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .card .detail { font-size: 0.85rem; color: var(--muted); }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .toolbar h2 { font-size: 1.05rem; margin: 0; }
+  .periods { display: flex; gap: 4px; }
+  .periods button {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.9rem;
+  }
+  .periods button[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .chart-box { position: relative; height: 380px; }
+  @media (max-width: 600px) { .chart-box { height: 280px; } }
+  .status { color: var(--muted); padding: 40px 0; text-align: center; }
+  .status.error { color: var(--up); }
+  details summary { cursor: pointer; font-weight: 600; }
+  .table-wrap { overflow-x: auto; margin-top: 12px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+  footer { color: var(--muted); font-size: 0.85rem; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cotação do Dólar (USD/BRL)</h1>
+  <p class="subtitle">Dólar comercial PTAX (venda), diário, de janeiro de 2020 até hoje.</p>
+
+  <section class="cards" aria-live="polite">
+    <div class="card">
+      <div class="label">Última cotação</div>
+      <div class="value" id="c-last">—</div>
+      <div class="detail" id="c-last-date">&nbsp;</div>
+    </div>
+    <div class="card">
+      <div class="label" id="c-var-label">Variação no período</div>
+      <div class="value" id="c-var">—</div>
+      <div class="detail" id="c-var-detail">&nbsp;</div>
+    </div>
+    <div class="card">
+      <div class="label">Máxima no período</div>
+      <div class="value" id="c-max">—</div>
+      <div class="detail" id="c-max-date">&nbsp;</div>
+    </div>
+    <div class="card">
+      <div class="label">Mínima no período</div>
+      <div class="value" id="c-min">—</div>
+      <div class="detail" id="c-min-date">&nbsp;</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="toolbar">
+      <h2>Evolução diária</h2>
+      <div class="periods" role="group" aria-label="Período">
+        <button type="button" data-years="1" aria-pressed="false">1A</button>
+        <button type="button" data-years="2" aria-pressed="false">2A</button>
+        <button type="button" data-years="5" aria-pressed="false">5A</button>
+        <button type="button" data-years="0" aria-pressed="true">Tudo</button>
+      </div>
+    </div>
+    <div id="status" class="status">Carregando cotações do Banco Central…</div>
+    <div class="chart-box" id="chart-box" hidden><canvas id="chart" aria-label="Gráfico da cotação do dólar"></canvas></div>
+  </section>
+
+  <section class="panel">
+    <details>
+      <summary>Média mensal</summary>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mês</th><th>Média</th><th>Mínima</th><th>Máxima</th></tr></thead>
+          <tbody id="monthly"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    Fonte: <a href="https://www3.bcb.gov.br/sgspub/" target="_blank" rel="noopener">Banco Central do Brasil — SGS, série 1 (PTAX venda)</a>.
+    Os dados são buscados ao vivo a cada visita.
+  </footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 4, maximumFractionDigits: 4 });
+  const pct = new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' });
+  const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' });
+  const $ = (id) => document.getElementById(id);
+
+  let all = [];
+  let chart = null;
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function toBr(d) { return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); }
+  function parseBr(s) { const [d, m, y] = s.split('/').map(Number); return new Date(y, m - 1, d); }
+
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  async function load() {
+    const url = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.1/dados?formato=json&dataInicial=01/01/2020&dataFinal=' + toBr(new Date());
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const raw = await res.json();
+    return raw.map(r => ({ label: r.data, date: parseBr(r.data), value: Number(r.valor) }))
+              .filter(r => Number.isFinite(r.value));
+  }
+
+  function slice(years) {
+    if (!years) return all;
+    const last = all[all.length - 1].date;
+    const start = new Date(last.getFullYear() - years, last.getMonth(), last.getDate());
+    return all.filter(r => r.date >= start);
+  }
+
+  function updateCards(data, years) {
+    const lastAll = all[all.length - 1];
+    $('c-last').textContent = brl.format(lastAll.value);
+    $('c-last-date').textContent = 'em ' + lastAll.label;
+
+    const first = data[0], last = data[data.length - 1];
+    const change = last.value / first.value - 1;
+    $('c-var-label').textContent = years ? 'Variação em ' + years + (years === 1 ? ' ano' : ' anos') : 'Variação desde 2020';
+    const v = $('c-var');
+    v.textContent = pct.format(change);
+    v.className = 'value ' + (change > 0 ? 'up' : change < 0 ? 'down' : '');
+    $('c-var-detail').textContent = brl.format(first.value) + ' em ' + first.label;
+
+    let max = data[0], min = data[0];
+    for (const r of data) { if (r.value > max.value) max = r; if (r.value < min.value) min = r; }
+    $('c-max').textContent = brl.format(max.value);
+    $('c-max-date').textContent = 'em ' + max.label;
+    $('c-min').textContent = brl.format(min.value);
+    $('c-min-date').textContent = 'em ' + min.label;
+  }
+
+  function drawChart(data) {
+    const labels = data.map(r => r.label);
+    const values = data.map(r => r.value);
+    if (chart) {
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = values;
+      chart.update();
+      return;
+    }
+    const accent = cssVar('--accent'), soft = cssVar('--accent-soft'), muted = cssVar('--muted'), border = cssVar('--border');
+    chart = new Chart($('chart'), {
+      type: 'line',
+      data: { labels, datasets: [{ label: 'USD/BRL', data: values, borderColor: accent, backgroundColor: soft, fill: true, borderWidth: 1.75, pointRadius: 0, pointHoverRadius: 4, tension: 0.15 }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (ctx) => ' ' + brl.format(ctx.parsed.y) } }
+        },
+        scales: {
+          x: { ticks: { color: muted, maxTicksLimit: 8, maxRotation: 0 }, grid: { display: false } },
+          y: { ticks: { color: muted, callback: (v) => 'R$ ' + Number(v).toFixed(2).replace('.', ',') }, grid: { color: border } }
+        }
+      }
+    });
+  }
+
+  function buildMonthly() {
+    const groups = new Map();
+    for (const r of all) {
+      const key = r.date.getFullYear() + '-' + pad(r.date.getMonth() + 1);
+      if (!groups.has(key)) groups.set(key, { date: new Date(r.date.getFullYear(), r.date.getMonth(), 1), vals: [] });
+      groups.get(key).vals.push(r.value);
+    }
+    const rows = [...groups.values()].reverse().map(g => {
+      const avg = g.vals.reduce((a, b) => a + b, 0) / g.vals.length;
+      const name = monthName.format(g.date);
+      return '<tr><td>' + name.charAt(0).toUpperCase() + name.slice(1) + '</td><td>' + brl.format(avg) +
+             '</td><td>' + brl.format(Math.min(...g.vals)) + '</td><td>' + brl.format(Math.max(...g.vals)) + '</td></tr>';
+    });
+    $('monthly').innerHTML = rows.join('');
+  }
+
+  function select(years) {
+    document.querySelectorAll('.periods button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.years) === years)));
+    const data = slice(years);
+    updateCards(data, years);
+    drawChart(data);
+  }
+
+  document.querySelectorAll('.periods button').forEach(b => b.addEventListener('click', () => { if (all.length) select(Number(b.dataset.years)); }));
+
+  load().then(data => {
+    if (!data.length) throw new Error('sem dados');
+    all = data;
+    $('status').hidden = true;
+    $('chart-box').hidden = false;
+    select(0);
+    buildMonthly();
+  }).catch(err => {
+    const s = $('status');
+    s.classList.add('error');
+    s.textContent = 'Não foi possível carregar as cotações do Banco Central agora (' + err.message + '). Tente recarregar a página em alguns instantes.';
+  });
+})();
+</script>
+</body>
+</html>
